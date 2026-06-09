@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Alive Workspace - Hermes Home</title>
+  <script>p5.disableFriendlyErrors = true;</script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.11.3/p5.min.js"></script>
+  <style>
+    html, body { margin: 0; padding: 0; overflow: hidden; background: #0f0f23; }
+    canvas { display: block; }
+  </style>
+</head>
+<body>
+<script>
+// === Configuration ===
+const CONFIG = {
+  seed: 42,
+  houseSize: 200,
+  officeSize: 150,
+  animationSpeed: 1.0,
+  particleCount: 30
+};
+
+// === Color Palette ===
+const PALETTE = {
+  bgDark: '#0f0f23',
+  bgMedium: '#1a1a2e',
+  bgLight: '#16213e',
+  wallColor: '#8b5e3c',
+  roofColor: '#6d4c41',
+  windowLight: '#ffeaa7',
+  windowFrame: '#2d3436',
+  deskColor: '#636e72',
+  chairColor: '#b2bec3',
+  monitorGlow: '#00b894',
+  plantLeaf: '#00b894',
+  plantStem: '#55efc4',
+  particle1: '#ffeaa7',
+  particle2: '#fab1a0',
+  particle3: '#e17055'
+};
+
+// === Global State ===
+let t = 0;
+let particles = [];
+
+// === Preload (fonts, images, data) ===
+function preload() {
+  // Nothing to preload for this sketch
+}
+
+// === Setup ===
+function setup() {
+  createCanvas(1200, 800);
+  randomSeed(CONFIG.seed);
+  noiseSeed(CONFIG.seed);
+  colorMode(HSB, 360, 100, 100, 100);
+  
+  // Initialize particles
+  for (let i = 0; i < CONFIG.particleCount; i++) {
+    particles.push({
+      x: random(width),
+      y: random(height),
+      vx: random(-0.5, 0.5),
+      vy: random(-0.5, 0.5),
+      size: random(2, 6),
+      hue: random(30, 60), // yellow-orange range
+      alpha: random(50, 100),
+      life: random(0.5, 2.0)
+    });
+  }
+}
+
+// === Draw Loop ===
+function draw() {
+  // Background gradient
+  noStroke();
+  for (let y = 0; y < height; y++) {
+    let inter = map(y, 0, height, 0, 1);
+    let c = lerpColor(color(PALETTE.bgDark), color(PALETTE.bgMedium), inter);
+    fill(c);
+    rect(0, y, width, 1);
+  }
+  
+  t += 0.01 * CONFIG.animationSpeed;
+  
+  // Draw animated elements
+  drawHouse();
+  drawOffice();
+  drawParticles();
+  drawNatureElements();
+  
+  // Add some animated UI elements
+  drawAnimatedUI();
+}
+
+// === Helper Functions ===
+function drawHouse() {
+  push();
+  translate(width * 0.25, height * 0.6);
+  
+  // House body
+  fill(PALETTE.wallColor);
+  rect(-CONFIG.houseSize/2, -CONFIG.houseSize/2, CONFIG.houseSize, CONFIG.houseSize, 10);
+  
+  // Roof
+  fill(PALETTE.roofColor);
+  beginShape();
+  vertex(-CONFIG.houseSize/2 * 1.2, -CONFIG.houseSize/2);
+  vertex(0, -CONFIG.houseSize/2 * 1.8);
+  vertex(CONFIG.houseSize/2 * 1.2, -CONFIG.houseSize/2);
+  endShape(CLOSE);
+  
+  // Windows with animated light
+  let windowSize = CONFIG.houseSize * 0.2;
+  let windowOffset = CONFIG.houseSize * 0.3;
+  
+  // Left window
+  push();
+  translate(-windowOffset, -windowOffset);
+  fill(PALETTE.windowFrame);
+  rect(-windowSize/2, -windowSize/2, windowSize, windowSize, 5);
+  // Animated light inside
+  let lightIntensity = map(sin(t * 2 + i), -1, 1, 0.3, 1);
+  fill(PALETTE.windowLight[0], PALETTE.windowLight[1], PALETTE.windowLight[2], lightIntensity * 100);
+  rect(-windowSize/2 + 2, -windowSize/2 + 2, windowSize - 4, windowSize - 4, 3);
+  pop();
+  
+  // Right window
+  push();
+  translate(windowOffset, -windowOffset);
+  fill(PALETTE.windowFrame);
+  rect(-windowSize/2, -windowSize/2, windowSize, windowSize, 5);
+  // Animated light inside (out of phase)
+  let lightIntensity2 = map(sin(t * 2 + PI), -1, 1, 0.3, 1);
+  fill(PALETTE.windowLight[0], PALETTE.windowLight[1], PALETTE.windowLight[2], lightIntensity2 * 100);
+  rect(-windowSize/2 + 2, -windowSize/2 + 2, windowSize - 4, windowSize - 4, 3);
+  pop();
+  
+  // Door
+  push();
+  translate(0, CONFIG.houseSize * 0.1);
+  fill('#4a5568');
+  rect(-CONFIG.houseSize * 0.1, 0, CONFIG.houseSize * 0.2, CONFIG.houseSize * 0.4, 3);
+  // Door knob
+  fill('#fdcb6e');
+  ellipse(CONFIG.houseSize * 0.05, CONFIG.houseSize * 0.2, 5, 5);
+  pop();
+  
+  // Chimney with smoke
+  push();
+  translate(-CONFIG.houseSize * 0.3, -CONFIG.houseSize * 0.6);
+  fill('#636e72');
+  rect(-10, -20, 20, 20);
+  // Smoke particles
+  for (let i = 0; i < 3; i++) {
+    let smokeX = sin(t * 0.5 + i) * 2;
+    let smokeY = -20 - i * 8;
+    let smokeSize = map(sin(t * 0.3 + i), -1, 1, 3, 8);
+    fill(255, 255, 255, map(sin(t * 0.2 + i), -1, 1, 20, 80));
+    noStroke();
+    ellipse(smokeX, smokeY, smokeSize, smokeSize);
+  }
+  pop();
+  
+  pop();
+}
+
+function drawOffice() {
+  push();
+  translate(width * 0.75, height * 0.55);
+  
+  // Desk
+  fill(PALETTE.deskColor);
+  rect(-CONFIG.officeSize/2, -CONFIG.officeSize/4, CONFIG.officeSize, CONFIG.officeSize/2, 8);
+  
+  // Monitor
+  push();
+  translate(-CONFIG.officeSize * 0.2, -CONFIG.officeSize * 0.3);
+  fill('#2d3436');
+  rect(-30, -20, 60, 40, 5);
+  // Screen with animated content
+  fill(PALETTE.monitorGlow);
+  rect(-28, -18, 56, 36, 3);
+  // Animated bars on screen
+  for (let i = 0; i < 3; i++) {
+    let barHeight = map(sin(t * 2 + i * PI/3), -1, 1, 10, 30);
+    fill(PALETTE.monitorGlow, map(sin(t * 1.5 + i), -1, 1, 50, 100));
+    rect(-24 + i * 16, -barHeight/2, 8, barHeight, 2);
+  }
+  pop();
+  
+  // Keyboard
+  push();
+  translate(0, CONFIG.officeSize * 0.1);
+  fill('#636e72');
+  rect(-40, -5, 80, 10, 3);
+  // Keys
+  for (let i = 0; i < 4; i++) {
+    let keyX = -30 + i * 20;
+    let keyY = -2;
+    fill('#b2bec3');
+    rect(keyX, keyY, 12, 6, 2);
+    // Animated key press
+    if (sin(t * 3 + i) > 0.7) {
+      fill('#dfe6e9');
+      rect(keyX, keyY - 1, 12, 3, 1);
+    }
+  }
+  pop();
+  
+  // Chair
+  push();
+  translate(CONFIG.officeSize * 0.3, CONFIG.officeSize * 0.1);
+  // Seat
+  fill(PALETTE.chairColor);
+  arc(0, 0, 40, 20, 0, PI, CHORD);
+  // Back
+  fill(PALETTE.chairColor);
+  rect(-15, -25, 30, 20, 3);
+  // Legs
+  fill('#636e72');
+  rect(-18, 0, 4, 15);
+  rect(14, 0, 4, 15);
+  pop();
+  
+  // Lamp on desk
+  push();
+  translate(CONFIG.officeSize * 0.25, -CONFIG.officeSize * 0.2);
+  // Base
+  fill('#636e72');
+  rect(-8, 0, 16, 6);
+  // Stand
+  rect(-2, -20, 4, 20);
+  // Light
+  let lampGlow = map(sin(t * 1.5), -1, 1, 50, 100);
+  fill(PALETTE.windowLight[0], PALETTE.windowLight[1], PALETTE.windowLight[2], lampGlow);
+  ellipse(0, -25, 20, 10);
+  pop();
+  
+  pop();
+}
+
+function drawParticles() {
+  for (let p of particles) {
+    // Update position
+    p.x += p.vx;
+    p.y += p.vy;
+    
+    // Bounce off edges
+    if (p.x < 0 || p.x > width) p.vx *= -1;
+    if (p.y < 0 || p.y > height) p.vy *= -1;
+    
+    // Gentle drift toward center
+    let centerX = width / 2;
+    let centerY = height / 2;
+    p.vx += (centerX - p.x) * 0.0005;
+    p.vy += (centerY - p.y) * 0.0005;
+    
+    // Update life and alpha
+    p.life -= 0.01;
+    if (p.life <= 0) {
+      // Reset particle
+      p.x = random(width);
+      p.y = random(height);
+      p.vx = random(-0.5, 0.5);
+      p.vy = random(-0.5, 0.5);
+      p.life = random(0.5, 2.0);
+      p.hue = random(30, 60);
+    }
+    
+    p.alpha = map(p.life, 0, 2, 0, 80);
+    
+    // Draw particle
+    noStroke();
+    fill(p.hue, 80, 100, p.alpha);
+    ellipse(p.x, p.y, p.size, p.size);
+    
+    // Add trailing effect
+    if (random() > 0.9) {
+      fill(p.hue, 80, 100, p.alpha * 0.3);
+      ellipse(p.x + random(-2, 2), p.y + random(-2, 2), p.size * 0.5, p.size * 0.5);
+    }
+  }
+}
+
+function drawNatureElements() {
+  // Floating leaves/petals
+  for (let i = 0; i < 8; i++) {
+    let x = width * 0.1 + i * width * 0.1 + sin(t * 0.5 + i) * 20;
+    let y = height * 0.2 + sin(t * 0.3 + i * PI/4) * 30;
+    let size = map(sin(t * 0.7 + i), -1, 1, 8, 15);
+    let rotation = t * 0.5 + i;
+    
+    push();
+    translate(x, y);
+    rotate(rotation);
+    fill(PALETTE.plantLeaf, 70);
+    beginShape();
+    vertex(0, -size/2);
+    vertex(size/3, 0);
+    vertex(0, size/2);
+    vertex(-size/3, 0);
+    endShape(CLOSE);
+    pop();
+  }
+  
+  // Small floating elements near house/office
+  for (let i = 0; i < 5; i++) {
+    let x = width * 0.25 + sin(t * 0.4 + i) * 30;
+    let y = height * 0.6 + cos(t * 0.3 + i) * 20;
+    let size = map(sin(t * 0.6 + i * 2), -1, 1, 2, 6);
+    
+    push();
+    translate(x, y);
+    fill(PALETTE.particle1, 60);
+    ellipse(0, 0, size, size);
+    // Add a little glow
+    for (let j = 0; j < 2; j++) {
+      fill(PALETTE.particle1, 30 - j * 10);
+      ellipse(0, 0, size + j * 4, size + j * 4);
+    }
+    pop();
+  }
+}
+
+function drawAnimatedUI() {
+  // Subtle animated border
+  push();
+  noFill();
+  strokeWeight(2);
+  stroke(PALETTE.windowLight[0], PALETTE.windowLight[1], PALETTE.windowLight[2], 30);
+  let waveOffset = sin(t * 0.2) * 5;
+  beginShape();
+  for (let x = 0; x <= width; x += 20) {
+    let yOffset = sin(t * 0.5 + x * 0.02) * waveOffset;
+    vertex(x, height * 0.05 + yOffset);
+  }
+  vertex(width, height * 0.95);
+  for (let x = width; x >= 0; x -= 20) {
+    let yOffset = sin(t * 0.5 + x * 0.02 + PI) * waveOffset;
+    vertex(x, height * 0.95 + yOffset);
+  }
+  vertex(0, height * 0.05);
+  endShape(CLOSE);
+  pop();
+  
+  // Title
+  fill(255, 200);
+  textSize(24);
+  textAlign(CENTER, CENTER);
+  text("Hermes Alive Workspace", width/2, 40);
+  
+  // Subtitle
+  fill(200, 150);
+  textSize(14);
+  text("A living home/office environment", width/2, 70);
+  
+  // Time indicator
+  let timeOfDay = map(sin(t * 0.1), -1, 1, 0, 24);
+  let hours = floor(timeOfDay);
+  let minutes = floor((timeOfDay - hours) * 60);
+  let timeStr = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+  fill(180, 200, 255, 180);
+  textSize(16);
+  textAlign(RIGHT, TOP);
+  text(timeStr, width - 20, 20);
+}
+
+// === Event Handlers ===
+function keyPressed() {
+  if (key === 's' || key === 'S') {
+    saveCanvas('alive-workspace', 'png');
+  }
+  if (key === 'g' || key === 'G') {
+    saveGif('alive-workspace', 5); // 5 second GIF
+  }
+  if (key === 'r' || key === 'R') {
+    randomSeed(millis());
+    noiseSeed(millis());
+    // Reinitialize particles
+    particles = [];
+    for (let i = 0; i < CONFIG.particleCount; i++) {
+      particles.push({
+        x: random(width),
+        y: random(height),
+        vx: random(-0.5, 0.5),
+        vy: random(-0.5, 0.5),
+        size: random(2, 6),
+        hue: random(30, 60),
+        alpha: random(50, 100),
+        life: random(0.5, 2.0)
+      });
+    }
+  }
+  if (key === ' ') {
+    // Toggle animation pause
+    // In a more complex sketch we'd use noLoop()/loop()
+  }
+}
+
+function windowResized() {
+  resizeCanvas(windowWidth, windowHeight);
+}
+</script>
+</body>
+</html>
